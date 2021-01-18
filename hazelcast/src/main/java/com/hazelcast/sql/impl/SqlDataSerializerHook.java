@@ -26,6 +26,7 @@ import com.hazelcast.sql.impl.exec.scan.index.IndexEqualsFilter;
 import com.hazelcast.sql.impl.exec.scan.index.IndexFilterValue;
 import com.hazelcast.sql.impl.exec.scan.index.IndexInFilter;
 import com.hazelcast.sql.impl.exec.scan.index.IndexRangeFilter;
+import com.hazelcast.sql.impl.expression.CaseExpression;
 import com.hazelcast.sql.impl.expression.CastExpression;
 import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.ConstantExpression;
@@ -180,7 +181,9 @@ public class SqlDataSerializerHook implements DataSerializerHook {
 
     public static final int LAZY_TARGET = 65;
 
-    public static final int LEN = LAZY_TARGET + 1;
+    public static final int EXPRESSION_CASE = 66;
+
+    public static final int LEN = EXPRESSION_CASE + 1;
 
     @Override
     public int getFactoryId() {
@@ -274,6 +277,8 @@ public class SqlDataSerializerHook implements DataSerializerHook {
         constructors[EXPRESSION_REMAINDER] = arg -> new RemainderFunction<>();
 
         constructors[LAZY_TARGET] = arg -> new LazyTarget();
+
+        constructors[EXPRESSION_CASE] = arg -> new CaseExpression();
 
         return new ArrayDataSerializableFactory(constructors);
     }
