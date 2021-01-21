@@ -21,6 +21,7 @@ import com.hazelcast.sql.impl.SqlErrorCode;
 import com.hazelcast.sql.impl.calcite.validate.HazelcastResources;
 import com.hazelcast.sql.impl.calcite.validate.literal.Literal;
 import com.hazelcast.sql.impl.calcite.validate.literal.LiteralUtils;
+import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastCaseOperator;
 import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastReturnTypeInference;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils;
 import com.hazelcast.sql.impl.type.QueryDataType;
@@ -39,6 +40,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
@@ -46,8 +48,10 @@ import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.util.TimeString;
 
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Set;
 
 import static org.apache.calcite.sql.type.SqlTypeName.CHAR_TYPES;
@@ -83,15 +87,25 @@ public class HazelcastSqlToRelConverter extends SqlToRelConverter {
             return convertLiteral((SqlLiteral) node);
         } else if (node.getKind() == SqlKind.CAST) {
             return convertCast((SqlCall) node, blackboard);
+        } else if (node.getKind() == SqlKind.CASE) {
+            return convertCase((SqlCase) node, blackboard);
         } else if (node instanceof SqlCall) {
             return convertCall(node, blackboard);
-        } else if (node instanceof SqlNodeList) {
-            // CASE WHEN ... THEN ... case
-            SqlNodeList list = (SqlNodeList) node;
-            System.out.println(list);
         }
 
         return null;
+    }
+
+    private RexNode convertCase(SqlCase sqlCase, Blackboard blackboard) {
+        int branchSize = sqlCase.getWhenOperands().size();
+        List<RexNode> ops = new ArrayList<>(branchSize + branchSize + 1);
+        for (int i = 0; i < branchSize; i++) {
+            ops.add(convertExtendedExpression(sqlCase.getWhenOperands().get(i), blackboard));
+            ops.add(convertExtendedExpression(sqlCase.getThenOperands().get(i), blackboard));
+        }
+        ops.add(convertExtendedExpression(sqlCase.getElseOperand(), blackboard));
+
+        return getRexBuilder().makeCall(HazelcastCaseOperator.INSTANCE, ops);
     }
 
     /**
