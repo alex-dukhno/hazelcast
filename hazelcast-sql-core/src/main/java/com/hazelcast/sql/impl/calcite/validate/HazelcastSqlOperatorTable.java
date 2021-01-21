@@ -242,8 +242,9 @@ public final class HazelcastSqlOperatorTable extends ReflectiveSqlOperatorTable 
 
                 if (operand instanceof SqlCase && !(operand instanceof HazelcastSqlCase)) {
                     SqlCase sqlCase = (SqlCase) operand;
-                    SqlNode rewrittenCase = new HazelcastSqlCase(sqlCase.getParserPosition(), sqlCase.getValueOperand(), sqlCase.getWhenOperands(),
-                            sqlCase.getThenOperands(), sqlCase.getElseOperand());
+                    SqlNode rewrittenCase = new HazelcastSqlCase(
+                            sqlCase.getParserPosition(), sqlCase.getValueOperand(),
+                            sqlCase.getWhenOperands(), sqlCase.getThenOperands(), sqlCase.getElseOperand());
                     call.setOperand(i, rewrittenCase);
                 }
             }
@@ -274,8 +275,6 @@ public final class HazelcastSqlOperatorTable extends ReflectiveSqlOperatorTable 
                 assert resolvedOperators.size() == 1;
 
                 basicCall.setOperator(resolvedOperators.get(0));
-//            } else if (call instanceof SqlCase) {
-//                throw functionDoesNotExist(call);
             }
         }
 

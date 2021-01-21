@@ -38,6 +38,7 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
@@ -84,6 +85,10 @@ public class HazelcastSqlToRelConverter extends SqlToRelConverter {
             return convertCast((SqlCall) node, blackboard);
         } else if (node instanceof SqlCall) {
             return convertCall(node, blackboard);
+        } else if (node instanceof SqlNodeList) {
+            // CASE WHEN ... THEN ... case
+            SqlNodeList list = (SqlNodeList) node;
+            System.out.println(list);
         }
 
         return null;
