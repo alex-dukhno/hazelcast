@@ -376,6 +376,11 @@ public class NestingAndCasingExpressionTest extends ExpressionTestSupport {
         check(sql("UPPER(?) || UPPER(?)"), "1", "2");
     }
 
+    @Test
+    public void test_CASE() {
+        check(sql("CASE ? WHEN this THEN '100' END"), 1);
+    }
+
     private void check(String sql, Object... params) {
         checkValue0(sql, SqlColumnType.VARCHAR, SKIP_VALUE_CHECK, params);
         checkValue0(sql.toLowerCase(), SqlColumnType.VARCHAR, SKIP_VALUE_CHECK, params);
