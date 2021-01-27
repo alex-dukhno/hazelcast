@@ -17,8 +17,8 @@
 package com.hazelcast.sql.impl.calcite.validate;
 
 import com.hazelcast.internal.util.BiTuple;
+import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastCaseOperator;
 import com.hazelcast.sql.impl.calcite.validate.operators.HazelcastReturnTypeInference;
-import com.hazelcast.sql.impl.calcite.validate.operators.common.AbstractCaseOperator;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastBinaryOperator;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastFunction;
 import com.hazelcast.sql.impl.calcite.validate.operators.common.HazelcastPostfixOperator;
@@ -70,7 +70,7 @@ public class HazelcastSqlOperatorTableTest {
                 || operator instanceof HazelcastPostfixOperator
                 || operator instanceof HazelcastBinaryOperator
                 || operator instanceof HazelcastSpecialOperator
-                || operator instanceof AbstractCaseOperator;
+                || operator instanceof HazelcastCaseOperator;
 
             assertTrue("Operator must implement one of classes from " + HazelcastFunction.class.getPackage().toString()
                 + ": " + operator.getClass().getSimpleName(), valid);

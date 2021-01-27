@@ -42,17 +42,24 @@ import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.SqlPrefixOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
+import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.util.ReflectiveSqlOperatorTable;
 import org.apache.calcite.sql.util.SqlBasicVisitor;
 import org.apache.calcite.sql.validate.SqlNameMatchers;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.sql.impl.calcite.validate.HazelcastResources.RESOURCES;
 
@@ -199,6 +206,12 @@ public final class HazelcastSqlOperatorTable extends ReflectiveSqlOperatorTable 
         }
 
         @Override
+        public Void visit(SqlNodeList nodeList) {
+            rewriteNodeList(nodeList);
+            return super.visit(nodeList);
+        }
+
+        @Override
         public Void visit(SqlCall call) {
             rewriteCall(call);
 
@@ -206,6 +219,16 @@ public final class HazelcastSqlOperatorTable extends ReflectiveSqlOperatorTable 
         }
 
         private void rewriteCall(SqlCall call) {
+            List<SqlNode> operands = call.getOperandList();
+            for (int i = 0; i < operands.size(); ++i) {
+                SqlNode operand = operands.get(i);
+
+                SqlNode rewrittenCase = tryRewriteCase(operand);
+                if (rewrittenCase != null) {
+                    call.setOperand(i, rewrittenCase);
+                }
+            }
+
             if (call instanceof SqlBasicCall) {
                 // An alias is declared as a SqlBasicCall with "SqlKind.AS". We do not need to rewrite aliases, so skip it.
                 if (call.getKind() == SqlKind.AS) {
@@ -237,6 +260,51 @@ public final class HazelcastSqlOperatorTable extends ReflectiveSqlOperatorTable 
 
         private CalciteException functionDoesNotExist(SqlCall call) {
             throw RESOURCES.functionDoesNotExist(call.getOperator().getName()).ex();
+        }
+
+        private static void rewriteNodeList(SqlNodeList nodeList) {
+            for (int i = 0; i < nodeList.size(); ++i) {
+                SqlNode node = nodeList.get(i);
+
+                SqlNode rewrittenCase = tryRewriteCase(node);
+                if (rewrittenCase != null) {
+                    nodeList.set(i, rewrittenCase);
+                }
+            }
+        }
+
+        private static SqlNode tryRewriteCase(SqlNode node) {
+            if (node instanceof SqlCase && !(node instanceof HazelcastSqlCase)) {
+                SqlCase sqlCase = (SqlCase) node;
+                return new HazelcastSqlCase(sqlCase.getParserPosition(), sqlCase.getValueOperand(), sqlCase.getWhenOperands(),
+                        sqlCase.getThenOperands(), sqlCase.getElseOperand());
+            }
+            return null;
+        }
+    }
+
+    // extending `SqlCase` to override getOperator as it always returns calcite SqlCaseOperator#INSTANCE
+    static class HazelcastSqlCase extends SqlCase {
+        public HazelcastSqlCase(SqlParserPos pos, SqlNode value, SqlNodeList whenList, SqlNodeList thenList, SqlNode elseExpr) {
+            super(pos, value, whenList, thenList, elseExpr);
+        }
+
+        @Override
+        @Nonnull
+        public SqlOperator getOperator() {
+            System.out.println("HazelcastSqlCase#getOperator");
+            return HazelcastCaseOperator.INSTANCE;
+        }
+
+        @Override
+        @Nonnull
+        public List<SqlNode> getOperandList() {
+            // SQL CASE operator supports the following situations:
+            // * `CASE WHEN <predicate> THEN <return value>`
+            // * `CASE <value> WHEN <other value> THEN <return value>`
+            // so <value> operand could be null. In order not to have NullPointerException
+            // we are filtering super#getOperandList
+            return super.getOperandList().stream().filter(Objects::nonNull).collect(Collectors.toList());
         }
     }
 }
