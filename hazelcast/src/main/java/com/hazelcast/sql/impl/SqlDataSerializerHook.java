@@ -278,7 +278,7 @@ public class SqlDataSerializerHook implements DataSerializerHook {
 
         constructors[LAZY_TARGET] = arg -> new LazyTarget();
 
-        constructors[EXPRESSION_CASE] = arg -> new CaseExpression();
+        constructors[EXPRESSION_CASE] = arg -> new CaseExpression<>();
 
         return new ArrayDataSerializableFactory(constructors);
     }
