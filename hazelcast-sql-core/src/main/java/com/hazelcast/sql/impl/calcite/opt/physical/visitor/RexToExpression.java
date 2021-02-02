@@ -270,7 +270,7 @@ public final class RexToExpression {
                 );
 
             case CASE:
-                return CaseExpression.create(operands, resultType);
+                return CaseExpression.create(operands);
 
             case OTHER:
                 if (operator == HazelcastSqlOperatorTable.CONCAT) {
